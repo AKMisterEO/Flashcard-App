@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spanish Flashcards</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .container { width: 90%; max-width: 500px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; cursor: pointer; }
+        .hidden { display: none; }
+        .controls { margin-top: 20px; }
+        button { margin: 5px; padding: 10px; cursor: pointer; }
+        .file-input { margin-top: 20px; }
+        select { padding: 5px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Spanish Flashcards</h1>
+    <input type="file" id="csvFile" class="file-input" accept=".csv">
+    <select id="categoryFilter" class="hidden" onchange="filterByCategory()">
+        <option value="all">All Categories</option>
+    </select>
+    <div class="container">
+        <div id="flashcard" class="card hidden" onclick="flipCard()">Click to Flip</div>
+        <div class="controls">
+            <button onclick="swipe(false)">❌ Miss</button>
+            <button onclick="shuffleCards()">🔀 Shuffle</button>
+            <button onclick="swipe(true)">✅ Correct</button>
+            <button onclick="toggleCardSide()">🔄 Flip Side</button>
+        </div>
+    </div>
+    <script>
+        let flashcards = [], currentCardIndex = 0, showFront = true, missedCards = [], allFlashcards = [], startWithFront = true;
+
+        document.getElementById('csvFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const rows = e.target.result.split('\n').slice(1);
+                    flashcards = rows.map(row => {
+                        const cols = row.split(',');
+                        return { term: cols[0], translation: cols[1], oddities: cols[2], type: cols[3] };
+                    }).filter(card => card.term);
+                    allFlashcards = [...flashcards];
+                    populateCategories();
+                    currentCardIndex = 0;
+                    showFlashcard();
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function populateCategories() {
+            const categoryFilter = document.getElementById('categoryFilter');
+            categoryFilter.innerHTML = '<option value="all">All Categories</option>';
+            let categories = [...new Set(flashcards.map(card => card.type.trim()))];
+            categories.forEach(category => {
+                let option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+            categoryFilter.classList.remove('hidden');
+        }
+
+        function filterByCategory() {
+            const selectedCategory = document.getElementById('categoryFilter').value;
+            flashcards = selectedCategory === 'all' ? [...allFlashcards] : allFlashcards.filter(card => card.type.trim() === selectedCategory);
+            currentCardIndex = 0;
+            showFlashcard();
+        }
+
+        function showFlashcard() {
+            if (flashcards.length === 0) return;
+            showFront = startWithFront;
+            const card = flashcards[currentCardIndex];
+            document.getElementById('flashcard').textContent = showFront ? card.term : `${card.translation}\n(${card.oddities} - ${card.type})`;
+            document.getElementById('flashcard').classList.remove('hidden');
+        }
+
+        function flipCard() {
+            if (flashcards.length === 0) return;
+            showFront = !showFront;
+            const card = flashcards[currentCardIndex];
+            document.getElementById('flashcard').textContent = showFront ? card.term : `${card.translation}\n(${card.oddities} - ${card.type})`;
+        }
+
+        function swipe(correct) {
+            if (!correct) missedCards.push(flashcards[currentCardIndex]);
+            currentCardIndex++;
+            if (currentCardIndex >= flashcards.length) {
+                if (missedCards.length > 0) {
+                    flashcards = missedCards;
+                    missedCards = [];
+                    currentCardIndex = 0;
+                } else {
+                    alert('All words completed!');
+                    return;
+                }
+            }
+            showFlashcard();
+        }
+
+        function shuffleCards() {
+            flashcards.sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            showFlashcard();
+        }
+
+        function toggleCardSide() {
+            startWithFront = !startWithFront;
+            showFlashcard();
+        }
+    </script>
+</body>
+</html>
+
